@@ -2,6 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+using NATS.Client;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Valuator.Pages
 {
@@ -19,7 +23,7 @@ namespace Valuator.Pages
         {
 
         }
-        public IActionResult OnPost(string text)
+        public async Task<IActionResult> OnPost(string text)
         {
             _logger.LogDebug(text);
 
@@ -28,23 +32,31 @@ namespace Valuator.Pages
             string textKey = "TEXT-" + id;
             _storage.store(textKey, text);
 
-            string rankKey = "RANK-" + id;
-            _storage.store(rankKey, rank(text).ToString());
-
             string similarityKey = "SIMILARITY-" + id;
             _storage.store(similarityKey, similarity(text, id).ToString());
 
+            await CreateTaskForRankCalculator(id);
+            
             return Redirect($"summary?id={id}");
         }
 
-        private double rank(string text) { 
-            var counter = 0;
-            foreach ( var ch in text) { 
-                if (!Char.IsLetter(ch)) { 
-                    counter++;
+        private async Task CreateTaskForRankCalculator(string id)
+        {
+            CancellationTokenSource ct = new CancellationTokenSource();
+            ConnectionFactory cf = new ConnectionFactory();
+
+            using (IConnection c = cf.CreateConnection())
+            {
+                if (!ct.IsCancellationRequested)
+                {
+                    byte[] data = Encoding.UTF8.GetBytes(id);
+                    c.Publish("valuator.processing.rank", data);
+                    await Task.Delay(1000);
                 }
+
+                c.Drain();
+                c.Close();
             }
-            return Convert.ToDouble(counter / Convert.ToDouble(text.Length));
         }
 
         private int similarity(String text, string id) { 

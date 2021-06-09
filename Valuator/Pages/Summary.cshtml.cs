@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -25,8 +26,20 @@ namespace Valuator.Pages
         {
             _logger.LogDebug(id);
 
-            //TODO: проинициализировать свойства Rank и Similarity сохранёнными в БД значениями
-            Rank = Convert.ToDouble(_storage.value("RANK-" + id.ToString()));
+            var counter = 0;
+            var rank = _storage.value("RANK-" + id);
+            while (rank.Length == 0 && counter < 100)
+            {
+                Thread.Sleep(100);
+                rank = _storage.value("RANK-" + id);
+                ++counter;
+            }
+            if (rank.Length == 0)
+            {
+                _logger.LogWarning($"rank for id {id} does not found");
+            }
+
+            Rank = Math.Round(Convert.ToDouble(rank), 3);
             Similarity = Convert.ToDouble(_storage.value("SIMILARITY-" + id.ToString()));
 
         }
