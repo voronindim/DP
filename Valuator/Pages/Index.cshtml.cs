@@ -26,20 +26,24 @@ namespace Valuator.Pages
         {
 
         }
-        public async Task<IActionResult> OnPost(string text)
+        public async Task<IActionResult> OnPost(string text, string country)
         {
             _logger.LogDebug(text);
 
             string id = Guid.NewGuid().ToString();
 
+            var segmentId = getSegmentIdByCountry(country);
+            _logger.LogDebug("LOOKUP: {0}, {1}", id, segmentId);
+            _storage.storeNewShardKey(id, segmentId);
+
             string similarityKey = "SIMILARITY-" + id;
             var similarityValue = similarity(text, id);
-            _storage.store(similarityKey, similarityValue.ToString());
+            _storage.store(id, similarityKey, similarityValue.ToString());
 
             publishSimilarityCalculatedEvent(id, similarityValue);
             
             string textKey = "TEXT-" + id;
-            _storage.store(textKey, text);
+            _storage.store(id, textKey, text);
 
             await createTaskForRankCalculator(id);
             
@@ -84,15 +88,24 @@ namespace Valuator.Pages
 
         private int similarity(String text, string id) { 
             id = "TEXT-" + id;
-            var pairs = _storage.values("TEXT-");
+            return _storage.isTextExist(text) ? 1 : 0;
+        }
 
-            foreach ( var pair in pairs) { 
-                if (pair.Key != id && pair.Value == text) { 
-                    return 1;
-                }
+        private string getSegmentIdByCountry(string country)
+        {
+            switch (country)
+            {
+                case "Russia":
+                    return Constants.SEGMENT_ID_RUS;
+                case "France":
+                case "Germany":
+                    return Constants.SEGMENT_ID_EU;
+                case "USA":
+                case "India":
+                    return Constants.SEGMENT_ID_OTHER;
             }
-
-            return 0;
+            _logger.LogWarning("Country {0} doesn't support", country);
+            return string.Empty;
         }
     }
 }

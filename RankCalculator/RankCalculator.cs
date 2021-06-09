@@ -23,10 +23,13 @@ namespace RankCalculator
             _subscription = _conn.SubscribeAsync("valuator.processing.rank", "rank_calculator", async (sender, args) =>
             {
                 string id = Encoding.UTF8.GetString(args.Message.Data);
-                var text = storage.value("TEXT-" + id);
+
+                _logger.LogDebug("LOOKUP: {0}, {1}", id, storage.getSegmentId(id));
+
+                var text = storage.value(id, "TEXT-" + id);
                 string rankKey = "RANK-" + id;
                 var rank = getRank(text);
-                storage.store(rankKey, rank.ToString());
+                storage.store(id, rankKey, rank.ToString());
 
                 await publishRankCalculatedEvent(id, rank);
             });

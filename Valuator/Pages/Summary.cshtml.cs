@@ -21,14 +21,14 @@ namespace Valuator.Pages
 
         public void OnGet(string id)
         {
-            _logger.LogDebug(id);
+            _logger.LogDebug("LOOKUP: {0}, {1}", id, _storage.getSegmentId(id));
 
             var counter = 0;
-            var rank = _storage.value("RANK-" + id);
+            var rank = _storage.value(id, "RANK-" + id);
             while (rank.Length == 0 && counter < 100)
             {
                 Thread.Sleep(100);
-                rank = _storage.value("RANK-" + id);
+                rank = _storage.value(id, "RANK-" + id);
                 ++counter;
             }
             if (rank.Length == 0)
@@ -37,7 +37,7 @@ namespace Valuator.Pages
             }
 
             Rank = Math.Round(Convert.ToDouble(rank), 3);
-            Similarity = Convert.ToDouble(_storage.value("SIMILARITY-" + id.ToString()));
+            Similarity = Convert.ToDouble(_storage.value(id, "SIMILARITY-" + id.ToString()));
 
         }
     }
