@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+using LibStorage;
 
 namespace Valuator.Pages
 {
@@ -16,7 +13,7 @@ namespace Valuator.Pages
         public SummaryModel(ILogger<SummaryModel> logger, Storage storage)
         {
             _logger = logger;
-            _storage = storage;
+            _storage = storage;   
         }
 
         public double Rank { get; set; }

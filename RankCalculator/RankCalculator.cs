@@ -1,8 +1,11 @@
 using NATS.Client;
 using System;
 using System.Text;
-using Valuator;
 using Microsoft.Extensions.Logging;
+using LibStorage;
+using LoggingObjects;
+using System.Threading.Tasks;
+using System.Text.Json;
 
 namespace RankCalculator
 {
@@ -17,16 +20,34 @@ namespace RankCalculator
 
             _conn = new ConnectionFactory().CreateConnection();
 
-            _subscription = _conn.SubscribeAsync("valuator.processing.rank", "rank_calculator", (sender, args) =>
+            _subscription = _conn.SubscribeAsync("valuator.processing.rank", "rank_calculator", async (sender, args) =>
             {
                 string id = Encoding.UTF8.GetString(args.Message.Data);
                 var text = storage.value("TEXT-" + id);
                 string rankKey = "RANK-" + id;
                 var rank = getRank(text);
                 storage.store(rankKey, rank.ToString());
+
+                await publishRankCalculatedEvent(id, rank);
             });
         }
+        private async Task publishRankCalculatedEvent(string id, double rank)
+        {
+            Rank textRank = new Rank();
+            textRank.textId = id;
+            textRank.value = rank;
 
+            ConnectionFactory cf = new ConnectionFactory();
+            using (IConnection c = cf.CreateConnection())
+            {
+                byte[] data = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(textRank));
+                c.Publish("rank_calculator.rank_calculated", data);
+                await Task.Delay(1000);
+
+                c.Drain();
+                c.Close();
+            }
+        }
         public void Run()
         {
             _subscription.Start();
