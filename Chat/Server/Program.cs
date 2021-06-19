@@ -9,6 +9,7 @@ namespace Server
 {
     class Program
     {
+        private const string EOF = "<EOF>";
         private static List<string> _history = new List<string>();
         public static void StartListening(int port)
         {
@@ -40,7 +41,18 @@ namespace Server
 
                     // RECEIVE
                     int bytesRec = handler.Receive(buf);
-                    string data = Encoding.UTF8.GetString(buf, 0, bytesRec);
+                    string data = "";
+                    while (bytesRec != 0)
+                    {
+                        data += Encoding.UTF8.GetString(buf, 0, bytesRec);
+                        if (data.IndexOf(EOF) > -1)
+                        {
+                            break;
+                        }
+                        bytesRec = handler.Receive(buf);
+                    }
+
+                    data = data.Remove(data.Length - EOF.Length, EOF.Length);
 
                     _history.Add(data);
                     Console.WriteLine("Message received: {0}", data);

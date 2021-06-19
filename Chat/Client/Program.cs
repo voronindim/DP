@@ -11,6 +11,7 @@ namespace Client
 {
     class Program
     {
+        private const string EOF = "<EOF>";
         public static void StartClient(string address, int port, string message)
         {
             try
@@ -30,12 +31,18 @@ namespace Client
                     sender.Connect(remoteEP);
 
                     // SEND
-                    int bytesSent = sender.Send(Encoding.UTF8.GetBytes(message));
+                    int bytesSent = sender.Send(Encoding.UTF8.GetBytes(message + EOF));
 
                     // RECEIVE
                     byte[] buf = new byte[1024];
+                    string stringifiedHistory = "";
                     int bytesRec = sender.Receive(buf);
-                    var history = JsonSerializer.Deserialize<List<string>>(Encoding.UTF8.GetString(buf, 0, bytesRec));
+                    while (bytesRec != 0)
+                    {
+                        stringifiedHistory += Encoding.UTF8.GetString(buf, 0, bytesRec);
+                        bytesRec = sender.Receive(buf);
+                    }
+                    var history = JsonSerializer.Deserialize<List<string>>(stringifiedHistory);
                     
                     foreach (var msg in history)
                     {
